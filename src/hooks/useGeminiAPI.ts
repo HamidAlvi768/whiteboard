@@ -7,10 +7,6 @@ const API_URL =
 export const useGeminiAPI = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  let prompt =
-    "You are: you are integrated to a canvas app where user will be draw anything on the canvas and you will be read this canvas image and response the image in a most accurate form if there is english or other vecotr or graphics.";
-  prompt += "Context: you will be only response with the given data and response.";
-
   const processHandwriting = async (imageData: string): Promise<string> => {
     setIsProcessing(true);
     try {
@@ -21,8 +17,7 @@ export const useGeminiAPI = () => {
           {
             parts: [
               {
-                // text: "You are a handwriting recognition expert. The image contains handwritten text. Extract and return ONLY the text content, exactly as written. Do not include any explanations or additional text in your response. If you see no text or the image is blank, respond with an empty string.",
-                text:prompt,
+                text: "You are a handwriting recognition expert. The image contains handwritten text. Extract and return ONLY the text content, exactly as written. Do not include any explanations or additional text in your response. If you see no text or the image is blank, respond with an empty string.Return ONLY the text or character drawn in the image. Do not include any descriptions, explanations, or additional text. For example, if you see the letter 'A', respond with just 'A'. If you see no text, respond with an empty string.",
               },
               {
                 inline_data: {
@@ -37,7 +32,7 @@ export const useGeminiAPI = () => {
           temperature: 0,
           topK: 1,
           topP: 1,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 256,
         },
         safetySettings: [
           {
@@ -80,13 +75,15 @@ export const useGeminiAPI = () => {
       const data = await response.json();
       const text = data.candidates[0].content.parts[0].text.trim();
 
-      // Remove any explanatory text that might be included
+      // Clean the response to remove any descriptions or explanations
       const cleanedText = text
-        .replace(/^["']|["']$/g, "")
-        .replace(
-          /^I see the text |^The text says |^The handwritten text reads |^The text reads /,
-          ""
-        )
+        .replace(/^["']|["']$/g, "") // Remove quotes
+        .replace(/^The image shows |^I see |^This is |^The image contains |^The letter |^The character |^The text |^It appears to be |^It shows |^It is |^This looks like /, "")
+        .replace(/ drawn in the image$| in the image$| appears$| is shown$/, "")
+        .replace(/^a |^an |^the /, "")
+        .replace(/^hand-drawn |^handwritten /, "")
+        .replace(/^uppercase letter |^lowercase letter |^letter /, "")
+        .replace(/^character |^symbol /, "")
         .trim();
 
       return cleanedText;
